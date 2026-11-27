@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="300" viewBox="0 0 640 300">
+  <rect width="640" height="300" fill="#14161a"/>
+  <text x="20" y="30" fill="#e8e8e8" font-family="monospace" font-size="15" font-weight="bold">mochiwasmy — package layers</text>
+  <g font-family="monospace" font-size="12">
+    <rect x="20" y="50" width="600" height="50" fill="#1f2a3a" stroke="#3a6ea5"/>
+    <text x="35" y="80" fill="#9fc5e8">node_modules/  JS face  — index.js + manifest.json (layer: js_face)</text>
+    <rect x="20" y="115" width="600" height="50" fill="#24331f" stroke="#4a8a3a"/>
+    <text x="35" y="145" fill="#a8d8a0">mochi_modules/  native plugin  — mbjs_init_module + manifest.json (layer: native_core)</text>
+    <rect x="20" y="180" width="600" height="50" fill="#3a2a1f" stroke="#a57a3a"/>
+    <text x="35" y="210" fill="#e0c9a0">loader contract: .dll/.so/.lbrct specifier; MBJS_* resolved from host image at init</text>
+    <rect x="20" y="245" width="600" height="35" fill="#2a1f2a" stroke="#7a3aa5"/>
+    <text x="35" y="267" fill="#d0a0e8">engine core  — single owner of JSContext, atoms & GC</text>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+{
+  "layer": "native_core",
+  "name": "mochiwasmy",
+  "version": "0.1.0",
+  "abi_version": "MBC1",
+  "entry_point": "mbjs_init_module",
+  "status": "stub",
+  "targets": {
+    "x86_64-windows": "./lib/mochiwasmy_x86_64.dll"
+  },
+  "exports": [
+    "ping"
+  ],
+  "sources": [
+    "src/mochiwasmy.c"
+  ],
+  "headers": [
+    "include/mochiwasmy.h",
+    "include/mochiwasmy_abi.h"
+  ]
+}
