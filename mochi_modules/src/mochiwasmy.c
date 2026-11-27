@@ -1,6 +1,22 @@
+#ifndef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include "mbjs_runtime.h"
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <dlfcn.h>
+#ifndef __cdecl
+#define __cdecl
+#endif
+typedef void* HMODULE;
+#define LoadLibraryA(p) dlopen((p), RTLD_NOW)
+#define FreeLibrary(h) dlclose(h)
+#define GetProcAddress(h,n) dlsym(h,n)
+/* On bionic, dlopen(NULL) may return NULL; dlsym(NULL,...) then crashes.
+ * RTLD_DEFAULT (0) resolves the main program's exported symbols correctly. */
+#define GetModuleHandleA(n) ((void*)0)
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,7 +83,7 @@ static MBJSValue my_NewFloat64(MBJSContext *ctx, double v){ if(S_NewNumber) retu
 static MBJSValue my_NewInt64(MBJSContext *ctx, int64_t v){ if(rt.NewBigInt64) return rt.NewBigInt64(ctx,v); if(S_NewNumber) return S_NewNumber(ctx,(double)v); return my_NewInt32(ctx,(int32_t)v); }
 
 static const char *resolve_extra(void) {
-    HMODULE host = GetModuleHandleA(NULL); if (!host) return "GetModuleHandleA";
+    HMODULE host = GetModuleHandleA(NULL); /* RTLD_DEFAULT (0) on POSIX */
 #define R(T,N,S) do{ void *p=sym(host,S); if(!p) return S; N=(T)p; }while(0)
 #define RO(T,N,S) do{ void *p=sym(host,S); N=(T)p; }while(0)
     R(P_NewObject,S_NewObject,"MBJS_NewObject"); RO(P_NewCFunction2,S_NewCFunction2,"MBJS_NewCFunction2");
@@ -192,17 +208,21 @@ static MBJSValue js_call(MBJSContext *ctx, MBJSValueConst this_val, int argc, MB
     return ret;
 }
 
-static int module_init(MBJSContext *ctx, MBJSModuleDef *m){ (void)ctx; (void)m; return 0; }
+static const MBJSCFunctionListEntry wasmy_tab[] = {
+    MBJS_CFUNC_DEF("load",1,js_load), MBJS_CFUNC_DEF("parseModule",1,js_parse), MBJS_CFUNC_DEF("moduleFree",1,js_module_free),
+    MBJS_CFUNC_DEF("runtimeNew",1,js_runtime_new), MBJS_CFUNC_DEF("runtimeFree",1,js_runtime_free), MBJS_CFUNC_DEF("instantiate",1,js_instantiate),
+    MBJS_CFUNC_DEF("registerHost",4,js_register_host), MBJS_CFUNC_DEF("call",3,js_call), MBJS_CFUNC_DEF("exportFuncIndex",2,js_export_func_index),
+    MBJS_CFUNC_DEF("memoryLen",1,js_memory_len), MBJS_CFUNC_DEF("memoryRead",3,js_memory_read), MBJS_CFUNC_DEF("memoryWrite",3,js_memory_write),
+};
+#define WASMY_TAB_N ((int)(sizeof(wasmy_tab) / sizeof(wasmy_tab[0])))
+
+static int module_init(MBJSContext *ctx, MBJSModuleDef *m)
+{
+    return rt.SetModuleExportList(ctx, m, wasmy_tab, WASMY_TAB_N);
+}
 MBJS_MODULE_EXTERN MBJSModuleDef *mbjs_init_module(MBJSContext *ctx, const char *name){
     const char *missing=mbjs_runtime_resolve(&rt); if(missing){ rt.ThrowTypeError(ctx,"mochiwasmy: missing %s",missing); return NULL; } { const char *miss=resolve_extra(); if(miss){ FILE*f=fopen("C:/Users/Administrator/AppData/Local/Temp/mochiwasmy_miss.txt","w"); if(f){fputs(miss,f);fclose(f);} rt.ThrowTypeError(ctx,"mochiwasmy: missing %s",miss); return NULL; } }
     MBJSModuleDef *m=rt.NewCModule(ctx, name?name:"mochiwasmy", module_init); if(!m) return NULL;
-    const MBJSCFunctionListEntry tab[]={
-        MBJS_CFUNC_DEF("load",1,js_load), MBJS_CFUNC_DEF("parseModule",1,js_parse), MBJS_CFUNC_DEF("moduleFree",1,js_module_free),
-        MBJS_CFUNC_DEF("runtimeNew",1,js_runtime_new), MBJS_CFUNC_DEF("runtimeFree",1,js_runtime_free), MBJS_CFUNC_DEF("instantiate",1,js_instantiate),
-        MBJS_CFUNC_DEF("registerHost",4,js_register_host), MBJS_CFUNC_DEF("call",3,js_call), MBJS_CFUNC_DEF("exportFuncIndex",2,js_export_func_index),
-        MBJS_CFUNC_DEF("memoryLen",1,js_memory_len), MBJS_CFUNC_DEF("memoryRead",3,js_memory_read), MBJS_CFUNC_DEF("memoryWrite",3,js_memory_write),
-    };
-    if(rt.AddModuleExportList(ctx,m,tab,(int)(sizeof(tab)/sizeof(tab[0])))!=0) return NULL;
-    if(rt.SetModuleExportList(ctx,m,tab,(int)(sizeof(tab)/sizeof(tab[0])))!=0) return NULL;
+    if(rt.AddModuleExportList(ctx,m,wasmy_tab,WASMY_TAB_N)!=0) return NULL;
     return m;
 }
